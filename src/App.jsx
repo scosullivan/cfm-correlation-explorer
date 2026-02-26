@@ -158,7 +158,7 @@ const ExtremeLabel = (props) => {
 // ============================================================
 export default function CFMExplorer() {
   const [step, setStep] = useState(0);
-  const [animQ, setAnimQ] = useState(0.2);
+  const [animQ, setAnimQ] = useState(0.35);
   const [isAnimating, setIsAnimating] = useState(false);
   const animRef = useRef(null);
   const TOTAL_STEPS = 5;
@@ -200,8 +200,10 @@ export default function CFMExplorer() {
     const weightData = wRaw.map((w, i) => ({ asset: `${i + 1}`, raw: w, cleaned: wClean[i] })).sort((a, b) => a.raw - b.raw);
     const maxAbsRaw = Math.max(...wRaw.map(Math.abs));
     const maxAbsClean = Math.max(...wClean.map(Math.abs));
+    const hhiRaw = wRaw.reduce((s, w) => s + w * w, 0);
+    const hhiClean = wClean.reduce((s, w) => s + w * w, 0);
 
-    return { histogram, lp, signalCount, noiseCount, q, T, weightData, volRaw, volClean, volTruth, maxAbsRaw, maxAbsClean };
+    return { histogram, lp, signalCount, noiseCount, q, T, weightData, volRaw, volClean, volTruth, maxAbsRaw, maxAbsClean, hhiRaw, hhiClean };
   }, [animQ]);
 
   // Step 2 animation: slowly increase q
@@ -230,7 +232,7 @@ export default function CFMExplorer() {
   const resetAnimation = useCallback(() => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     setIsAnimating(false);
-    setAnimQ(0.2);
+    setAnimQ(0.35);
   }, []);
 
   const next = () => { resetAnimation(); setStep(s => Math.min(s + 1, TOTAL_STEPS - 1)); };
@@ -295,8 +297,9 @@ export default function CFMExplorer() {
             </h2>
             <p className="text-sm text-slate-500 mb-4 leading-relaxed">
               In the 1960s, mathematicians proved that a matrix of <em>purely random</em> numbers produces a
-              predictable pattern of eigenvalues — the <span className="font-semibold text-slate-700">Marchenko-Pastur distribution</span>.
-              Anything in your real correlation matrix that fits inside this pattern is indistinguishable from noise.
+              predictable statistical fingerprint — the <span className="font-semibold text-slate-700">Marchenko-Pastur distribution</span>.
+              Anything in your real correlation matrix that fits inside this fingerprint is indistinguishable from noise.
+              CFM's founders — Jean-Philippe Bouchaud and Marc Potters — developed a published, peer-reviewed method for separating the two.
             </p>
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-4">
               <div className="flex items-center justify-between mb-2">
@@ -304,7 +307,7 @@ export default function CFMExplorer() {
               </div>
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={data.histogram} margin={{ top: 10, right: 20, bottom: 25, left: 10 }}>
-                  <XAxis dataKey="bin" tick={{ fontSize: 9, fill: MED }} label={{ value: "Eigenvalue (measure of variance explained)", position: "bottom", fontSize: 10, fill: MED, offset: 0 }} />
+                  <XAxis dataKey="bin" tick={{ fontSize: 9, fill: MED }} label={{ value: "Strength of pattern (stronger →)", position: "bottom", fontSize: 10, fill: MED, offset: 0 }} />
                   <YAxis tick={{ fontSize: 9, fill: MED }} />
                   <ReferenceLine x={data.lp.toFixed(2)} stroke={RED} strokeDasharray="5 5" strokeWidth={2} />
                   <Bar dataKey="density" name="Your data" radius={[2, 2, 0, 0]}>
@@ -317,24 +320,26 @@ export default function CFMExplorer() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="bg-slate-100 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-slate-400">{N}</div>
-                <div className="text-xs text-slate-500 mt-1">Apparent risk factors</div>
+                <div className="text-xs text-slate-500 mt-1">Patterns your model sees</div>
               </div>
               <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
                 <div className="text-2xl font-bold" style={{ color: GREEN }}>{data.signalCount}</div>
-                <div className="text-xs text-green-700 mt-1">Real risk factors</div>
+                <div className="text-xs text-green-700 mt-1">Genuine relationships</div>
               </div>
               <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200">
                 <div className="text-2xl font-bold" style={{ color: RED }}>{data.noiseCount}</div>
-                <div className="text-xs text-red-700 mt-1">Pure noise</div>
+                <div className="text-xs text-red-700 mt-1">Coincidence</div>
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <p className="text-sm text-amber-800">
-                <span className="font-bold">Read this chart:</span> The{" "}
-                <span className="text-slate-500 font-semibold">grey bars</span> are eigenvalues that fit inside what random noise produces (the{" "}
+                <span className="font-bold">Read this chart:</span> Each bar represents a pattern of co-movement in your portfolio — things like
+                "the whole market rises and falls together" or "tech stocks move as a group." The{" "}
+                <span className="text-slate-500 font-semibold">grey bars</span> are patterns weak enough to be pure coincidence — they fit inside what you'd find in
+                completely random data (the{" "}
                 <span style={{ color: TEAL }} className="font-semibold">teal curve</span>). Only the{" "}
                 <span style={{ color: RED }} className="font-semibold">red bars</span> — the ones breaking through to the right of the dashed line —
-                represent genuine portfolio structure. Out of {N} apparent risk factors, only {data.signalCount} are real.
+                are strong enough to be genuine. Out of {N} apparent patterns, only {data.signalCount} are real.
               </p>
             </div>
           </div>
@@ -389,22 +394,22 @@ export default function CFMExplorer() {
                 <div className="text-lg font-bold" style={{ color: animQ > 0.6 ? RED : animQ > 0.3 ? GOLD : GREEN }}>
                   {((data.noiseCount / N) * 100).toFixed(0)}%
                 </div>
-                <div className="text-xs text-slate-600">of structure is noise</div>
+                <div className="text-xs text-slate-600">of patterns are coincidence</div>
               </div>
               <div className="bg-slate-50 rounded-lg p-3 text-center">
                 <div className="text-lg font-bold text-slate-700">{data.signalCount}</div>
-                <div className="text-xs text-slate-500">real factors surviving</div>
+                <div className="text-xs text-slate-500">genuine relationships</div>
               </div>
               <div className="bg-slate-50 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-slate-700">{data.T}</div>
-                <div className="text-xs text-slate-500">days of data needed</div>
+                <div className="text-lg font-bold text-slate-700">{(data.q).toFixed(2)}</div>
+                <div className="text-xs text-slate-500">noise ratio (higher = worse)</div>
               </div>
             </div>
 
             <div className="bg-slate-800 rounded-xl p-5">
               <p className="text-sm text-slate-300 leading-relaxed">
                 <span className="text-cyan-400 font-bold">What you just watched:</span> As the ratio increases,
-                the noise distribution (teal curve) swells and swallows more eigenvalues. The real factors
+                the noise distribution (teal curve) swells and swallows more of the bars. The genuine relationships
                 get harder to distinguish. At q = 0.5, over 90% of apparent structure is noise.
                 Most institutional portfolios operate in exactly this zone.
               </p>
@@ -421,54 +426,59 @@ export default function CFMExplorer() {
             <p className="text-sm text-slate-500 mb-4 leading-relaxed">
               This is where it matters for your capital. On the left: portfolio weights built on
               the raw, noisy correlation matrix. On the right: weights after CFM's cleaning methodology
-              removes the noise. Same assets, same data — different understanding of reality.
+              removes the noise. Same assets and data, but CFM reads the data differently.
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-red-50 rounded-xl p-4 border border-red-200">
                 <div className="text-xs font-bold text-red-700 tracking-wide mb-1">STANDARD APPROACH</div>
                 <div className="text-xs text-red-500 mb-3">Trusts the raw correlations</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={data.weightData} margin={{ top: 15, right: 5, bottom: 5, left: 5 }}>
-                    <XAxis dataKey="asset" tick={false} />
-                    <YAxis tick={{ fontSize: 8, fill: MED }} domain={["auto", "auto"]} />
-                    <ReferenceLine y={0} stroke="#CBD5E1" />
-                    <Bar dataKey="raw" radius={[1, 1, 0, 0]} label={<ExtremeLabel />}>
-                      {data.weightData.map((d, i) => <Cell key={i} fill={d.raw >= 0 ? "#94A3B8" : RED} fillOpacity={0.6} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="text-center mt-2">
-                  <span className="text-xl font-bold" style={{ color: RED }}>{(data.maxAbsRaw * 100).toFixed(0)}%</span>
-                  <span className="text-xs text-red-600 ml-2">largest single position</span>
+                <div style={{ height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.weightData} margin={{ top: 15, right: 5, bottom: 5, left: 5 }}>
+                      <XAxis dataKey="asset" tick={false} />
+                      <YAxis tick={{ fontSize: 8, fill: MED }} domain={[Math.min(0, ...data.weightData.map(d => d.raw)) * 1.2, Math.max(...data.weightData.map(d => d.raw), ...data.weightData.map(d => d.cleaned)) * 1.1]} />
+                      <ReferenceLine y={0} stroke="#CBD5E1" />
+                      <Bar dataKey="raw" radius={[1, 1, 0, 0]}>
+                        {data.weightData.map((d, i) => <Cell key={i} fill={d.raw >= 0 ? "#94A3B8" : RED} fillOpacity={0.6} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-center mt-3">
+                  <span className="text-lg font-bold" style={{ color: RED }}>{Math.round(1 / data.hhiRaw)}</span>
+                  <span className="text-xs text-red-600 ml-2">effective positions out of {N}</span>
                 </div>
               </div>
               <div className="bg-green-50 rounded-xl p-4 border border-green-200">
                 <div className="text-xs font-bold text-green-700 tracking-wide mb-1">CFM'S APPROACH</div>
-                <div className="text-xs text-green-600 mb-3">Cleans the matrix first</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={data.weightData} margin={{ top: 15, right: 5, bottom: 5, left: 5 }}>
-                    <XAxis dataKey="asset" tick={false} />
-                    <YAxis tick={{ fontSize: 8, fill: MED }} domain={["auto", "auto"]} />
-                    <ReferenceLine y={0} stroke="#CBD5E1" />
-                    <Bar dataKey="cleaned" radius={[1, 1, 0, 0]} label={<ExtremeLabel />}>
-                      {data.weightData.map((d, i) => <Cell key={i} fill={d.cleaned >= 0 ? GREEN : RED} fillOpacity={0.6} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div className="text-center mt-2">
-                  <span className="text-xl font-bold" style={{ color: GREEN }}>{(data.maxAbsClean * 100).toFixed(0)}%</span>
-                  <span className="text-xs text-green-600 ml-2">largest single position</span>
+                <div className="text-xs text-green-600 mb-3">Applies Bouchaud & Potters' cleaning</div>
+                <div style={{ height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.weightData} margin={{ top: 15, right: 5, bottom: 5, left: 5 }}>
+                      <XAxis dataKey="asset" tick={false} />
+                      <YAxis tick={{ fontSize: 8, fill: MED }} domain={[Math.min(0, ...data.weightData.map(d => d.raw)) * 1.2, Math.max(...data.weightData.map(d => d.raw), ...data.weightData.map(d => d.cleaned)) * 1.1]} />
+                      <ReferenceLine y={0} stroke="#CBD5E1" />
+                      <Bar dataKey="cleaned" radius={[1, 1, 0, 0]}>
+                        {data.weightData.map((d, i) => <Cell key={i} fill={d.cleaned >= 0 ? GREEN : RED} fillOpacity={0.6} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-center mt-3">
+                  <span className="text-lg font-bold" style={{ color: GREEN }}>{Math.round(1 / data.hhiClean)}</span>
+                  <span className="text-xs text-green-600 ml-2">effective positions out of {N}</span>
                 </div>
               </div>
             </div>
 
             <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
               <p className="text-sm text-cyan-800 leading-relaxed">
-                <span className="font-bold">What you're seeing:</span> The standard approach creates wild,
-                concentrated bets — some positions at {(data.maxAbsRaw * 100).toFixed(0)}% of the portfolio — because
-                the optimiser is chasing coincidental patterns that won't persist. CFM's approach produces more stable,
-                diversified weights because it only acts on correlations that are real.
+                <span className="font-bold">What you're seeing:</span> "Effective positions" measures how
+                diversified a portfolio truly is. A 50-stock portfolio where one stock dominates might
+                only have 15 effective positions — the rest are window dressing. The standard approach wastes
+                diversification by fitting to noise. CFM's approach, developed by Bouchaud and Potters and
+                published in <em>Risk</em> magazine, extracts more genuine diversification from the same assets.
               </p>
             </div>
           </div>
@@ -478,7 +488,7 @@ export default function CFMExplorer() {
         {step === 4 && (
           <div>
             <h2 className="text-2xl font-bold text-slate-800 font-serif mb-2">
-              One approach lies to you. The other doesn't.
+              One approach gives you a false sense of precision. The other doesn't.
             </h2>
             <p className="text-sm text-slate-500 mb-5 leading-relaxed">
               Every optimiser produces a risk estimate. The question is whether that estimate
@@ -504,16 +514,16 @@ export default function CFMExplorer() {
                   <div className="text-xs text-red-600">volatility</div>
                 </div>
                 <div className="text-center flex-1 bg-white rounded-lg p-3 border border-red-200">
-                  <div className="text-xs text-red-600 mb-1">Hidden risk</div>
+                  <div className="text-xs text-red-600 mb-1">Risk underestimation</div>
                   <div className="text-2xl font-bold" style={{ color: RED }}>
-                    +{(((data.volTruth - data.volRaw) / data.volRaw) * 100).toFixed(0)}%
+                    {(((data.volTruth - data.volRaw) / data.volRaw) * 100).toFixed(0)}%
                   </div>
-                  <div className="text-xs text-red-500">more than promised</div>
+                  <div className="text-xs text-red-500">worse than model predicted</div>
                 </div>
               </div>
               <p className="text-xs text-red-700 mt-4 leading-relaxed">
-                The optimiser exploits accidental correlations to claim it's built a lower-risk portfolio than it actually has.
-                You don't discover the lie until a drawdown hits harder than your model said it could.
+                The optimiser fits to accidental correlations, producing a risk estimate that's lower than what you'll actually experience.
+                You don't discover the gap until a drawdown hits harder than your model said it could.
               </p>
             </div>
 
@@ -566,15 +576,18 @@ export default function CFMExplorer() {
             <div style={{ backgroundColor: NAVY }} className="rounded-xl p-6">
               <div className="text-cyan-400 text-xs font-bold tracking-widest mb-3">WHY THIS MATTERS FOR MANAGER SELECTION</div>
               <p className="text-slate-300 text-sm leading-relaxed mb-3">
-                CFM's correlation cleaning methodology is published in peer-reviewed journals,
-                independently verifiable, and running in production across their strategies.
-                It's not a marketing claim — it's the actual code managing your capital.
+                This isn't a generic statistical technique available to anyone. The cleaning methodology
+                was developed by CFM's own leadership — Jean-Philippe Bouchaud (Chairman, member of the
+                French Academy of Sciences) and Marc Potters (CIO) — published in peer-reviewed journals,
+                and is running in production across CFM's strategies today. The research <em className="text-white">is</em> the
+                investment process.
               </p>
               <p className="text-slate-300 text-sm leading-relaxed mb-3">
                 When evaluating systematic managers, ask: <em className="text-white">how do they handle the fact that
                 most measured correlations are noise?</em> If the answer is
                 "we use shrinkage" or "we use a shorter lookback window," those are
-                rough approximations. CFM's approach is mathematically optimal.
+                rough approximations. CFM's approach is mathematically optimal — and you can read the
+                published paper to verify it yourself.
               </p>
               <p className="text-slate-400 text-xs mt-4">
                 Based on Bun, Bouchaud & Potters, <em>Cleaning Large Correlation Matrices:
