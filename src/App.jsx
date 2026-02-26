@@ -309,9 +309,9 @@ export default function CFMExplorer() {
                 <ComposedChart data={data.histogram} margin={{ top: 10, right: 20, bottom: 25, left: 10 }}>
                   <XAxis dataKey="bin" tick={{ fontSize: 9, fill: MED }} label={{ value: "Strength of pattern (stronger →)", position: "bottom", fontSize: 10, fill: MED, offset: 0 }} />
                   <YAxis tick={{ fontSize: 9, fill: MED }} />
-                  <ReferenceLine x={data.lp.toFixed(2)} stroke={RED} strokeDasharray="5 5" strokeWidth={2} />
+                  <ReferenceLine x={data.lp.toFixed(2)} stroke={GREEN} strokeDasharray="5 5" strokeWidth={2} />
                   <Bar dataKey="density" name="Your data" radius={[2, 2, 0, 0]}>
-                    {data.histogram.map((e, i) => <Cell key={i} fill={e.isSignal ? RED : "#94A3B8"} fillOpacity={e.isSignal ? 0.85 : 0.35} />)}
+                    {data.histogram.map((e, i) => <Cell key={i} fill={e.isSignal ? GREEN : "#94A3B8"} fillOpacity={e.isSignal ? 0.85 : 0.35} />)}
                   </Bar>
                   <Line type="monotone" dataKey="mp" name="Pure randomness" stroke={TEAL} strokeWidth={2.5} dot={false} />
                 </ComposedChart>
@@ -338,7 +338,7 @@ export default function CFMExplorer() {
                 <span className="text-slate-500 font-semibold">grey bars</span> are patterns weak enough to be pure coincidence — they fit inside what you'd find in
                 completely random data (the{" "}
                 <span style={{ color: TEAL }} className="font-semibold">teal curve</span>). Only the{" "}
-                <span style={{ color: RED }} className="font-semibold">red bars</span> — the ones breaking through to the right of the dashed line —
+                <span style={{ color: GREEN }} className="font-semibold">green bars</span> — the ones breaking through to the right of the dashed line —
                 are strong enough to be genuine. Out of {N} apparent patterns, only {data.signalCount} are real.
               </p>
             </div>
@@ -380,9 +380,9 @@ export default function CFMExplorer() {
                 <ComposedChart data={data.histogram} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
                   <XAxis dataKey="bin" tick={{ fontSize: 9, fill: MED }} />
                   <YAxis tick={{ fontSize: 9, fill: MED }} />
-                  <ReferenceLine x={data.lp.toFixed(2)} stroke={RED} strokeDasharray="5 5" strokeWidth={2} />
+                  <ReferenceLine x={data.lp.toFixed(2)} stroke={GREEN} strokeDasharray="5 5" strokeWidth={2} />
                   <Bar dataKey="density" radius={[2, 2, 0, 0]}>
-                    {data.histogram.map((e, i) => <Cell key={i} fill={e.isSignal ? RED : "#94A3B8"} fillOpacity={e.isSignal ? 0.85 : 0.35} />)}
+                    {data.histogram.map((e, i) => <Cell key={i} fill={e.isSignal ? GREEN : "#94A3B8"} fillOpacity={e.isSignal ? 0.85 : 0.35} />)}
                   </Bar>
                   <Line type="monotone" dataKey="mp" stroke={TEAL} strokeWidth={2.5} dot={false} />
                 </ComposedChart>
